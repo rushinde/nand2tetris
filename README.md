@@ -9,3 +9,4 @@ Course projects from [Nand2Tetris](https://www.nand2tetris.org/) based on the bo
 ### Completed: 
 + Project 1: Boolean Logic
 + Project 2: Boolean Arithmetic
++ Project 3: Sequential Logic
