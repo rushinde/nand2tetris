@@ -7,3 +7,4 @@ Course projects from [Nand2Tetris](https://www.nand2tetris.org/) based on the bo
 + Project 2: Boolean Arithmetic
 + Project 3: Sequential Logic
 + Project 4: Machine Language Programming
++ Project 5: Computer Architecture
