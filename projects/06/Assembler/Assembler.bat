@@ -1,0 +1,1 @@
+@py.exe D:\nand2tetris\projects\06\Assembler\Assembler.py %*
