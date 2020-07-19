@@ -36,31 +36,23 @@ class Parser:
 		if self.hasMoreCommands() == True:
 			self.current_command = self.infile[self.index]
 		self.index += 1
-	
-	#atype = re.compile('[@]\w+$')
+
 	def commandType(self):
-		#if self.atype.match(self.current_command)[0]:
 		if self.current_command[0] == "@":
 			return 1
 		else:
 			return 2
-	
-	#def symbol(self):
-	#	self.current_command.replace("(","")
-	#	self.current_command.replace(")","")
-	
+			
 	def dest(self):	
 		if "=" not in self.current_command:
 			return "null"
 		else: return self.current_command.split("=")[0]
-		
 		
 	def comp(self):
 		if "=" not in self.current_command:
 			return self.current_command.split(";")[0]
 		else: return self.current_command.split("=")[1]
 		
-	
 	def jump(self):
 		if ";" not in self.current_command:
 			return "null"
@@ -131,10 +123,6 @@ class Assembler:
 		code = Code()
 		st = SymbolTable()
 		self.i = 16
-		for keys in st.symbols:
-			print(keys)
-			print(st.symbols[keys])
-		
 		while parser.hasMoreCommands():
 			parser.advance()
 			if parser.commandType() == 1:
@@ -150,12 +138,9 @@ class Assembler:
 						outfile.write(code.getA(parser.current_command) + '\n')
 			elif parser.commandType() == 2:
 				outfile.write(code.getC(parser.dest(), parser.comp(), parser.jump()) + '\n')
-			#elif: parser.commandType() == 3:
-				#outfile.write(code.getA(parser.symbol) + '\n')
 		
 	def assemble(self, infile, outfile):
 		self.pass1(infile)
-		#print(infile)
 		self.pass2(infile, outfile)
 			
 			
@@ -172,20 +157,10 @@ def main():
 		infile.remove("")	
 	infile = [comment.sub('', x) for x in infile if not comment.match(x)]
 	infile = [x.strip() for x in infile]
-	#for line in reversed(infile):
-		#try:
-			#comment.sub('', line)
-			#print(line)
-			
-			#print(comment.search(line)[0])
-			#infile.remove(comment.search(line)[0])
-		#except:
-			#continue
-	
-	print(infile)	
+		
 	assembler = Assembler()
 	assembler.assemble(infile, outfile)
-	
+	print("Succes")
 	outfile.close()
 	
 if __name__=="__main__":
