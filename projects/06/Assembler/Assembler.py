@@ -1,12 +1,25 @@
 #! python3
 
-#TO-DO
-#Change filename to close items
-#Fix the jump thing
-#Symbol table
-
 import os, sys, re
 
+class SymbolTable:
+	def __init__(self):
+		pass
+	
+	symbols = {	'SP':0, 'LCL':1, 'ARG':2, 'THIS':3, 'THAT':4, 
+				'SCREEN':16384, 'KBD':24576, 'R0':0, 'R1':1, 'R2':2,
+				'R3':3, 'R4':4, 'R5':5, 'R6':6, 'R7':7, 'R8':8, 'R9':9,
+				'R10':10, 'R11':11, 'R12':12, 'R13':13, 'R14':14, 'R15':15}
+		
+	def addEntry(self, symbol, address):
+		self.symbols[symbol] = address
+	
+	def contains(self, symbol):
+		return symbol in self.symbols
+	
+	def getAddress(self, symbol):
+		return self.symbols[symbol]
+	
 class Parser:
 	def __init__(self, infile):
 		self.infile = infile
@@ -24,40 +37,48 @@ class Parser:
 			self.current_command = self.infile[self.index]
 		self.index += 1
 	
-	atype = re.compile('[@]\d+$')
+	#atype = re.compile('[@]\w+$')
 	def commandType(self):
-		try:
-			if self.atype.match(self.current_command)[0]:
-				return 1
-		except:
+		#if self.atype.match(self.current_command)[0]:
+		if self.current_command[0] == "@":
+			return 1
+		else:
 			return 2
 	
+	#def symbol(self):
+	#	self.current_command.replace("(","")
+	#	self.current_command.replace(")","")
+	
 	def dest(self):	
-		try:
-			return self.current_command.split("=")[0]
-		except:
+		if "=" not in self.current_command:
 			return "null"
+		else: return self.current_command.split("=")[0]
+		
 		
 	def comp(self):
-		try:
-			return self.current_command.split("=")[1]
-		except:
+		if "=" not in self.current_command:
 			return self.current_command.split(";")[0]
+		else: return self.current_command.split("=")[1]
+		
 	
 	def jump(self):
-		try:
-			return self.dest.split(";")[1]
-		except:
+		if ";" not in self.current_command:
 			return "null"
-	
+		return self.current_command.split(";")[1]	
 	
 class Code:
 	def __init__(self):
 		pass
-		
-	def getA(self, a):
-		return '0' + bin(int(a.split("@")[1]))[2:].zfill(15)
 	
+	atypenum = re.compile('[@]\d+$')	
+	def getA(self, a):
+		st = SymbolTable()
+		try:
+			if self.atypenum.match(a)[0]:
+				return '0' + bin(int(a.split("@")[1]))[2:].zfill(15)
+		except:	
+			return '0' + bin(int(st.symbols[a.split("@")[1]]))[2:].zfill(15)
+		
 	def getC(self, dest, comp, jump):
 		return '111' + self.getComp(comp) + self.getDest(dest) + self.getJump(jump)
 	
@@ -79,21 +100,63 @@ class Code:
 	jump_codes = { 	"null": "000", "JGT": "001", "JEQ": "010", "JGE": "011", "JLT": "100",
 					"JNE": "101", "JLE": "110", "JMP": "111"}
 	def getJump(self, jump):
-		return self.dest_codes[jump]
+		return self.jump_codes[jump]
 		
 	 
 class Assembler:
 	def __init__(self):
 		pass
-		
-	def assemble(self, infile, outfile):
+	
+	atypenum = re.compile('[@]\d+$')	
+	def pass1(self, infile):
 		parser = Parser(infile)
 		code = Code()
+		st = SymbolTable()
+		for keys in st.symbols:
+			print(st.symbols[keys])
+		while parser.hasMoreCommands():
+			parser.advance()
+			print(parser.current_command)
+			if parser.current_command[0] == '(':
+				if st.contains(parser.current_command[1:-1]):
+					infile.remove(parser.current_command)
+					continue
+				else:
+					parser.index -= 1
+					st.addEntry(parser.current_command[1:-1], parser.index)
+					infile.remove(parser.current_command)
+		
+	def pass2(self, infile, outfile):
+		parser = Parser(infile)
+		code = Code()
+		st = SymbolTable()
+		self.i = 16
+		for keys in st.symbols:
+			print(keys)
+			print(st.symbols[keys])
+		
 		while parser.hasMoreCommands():
 			parser.advance()
 			if parser.commandType() == 1:
-				outfile.write(code.getA(parser.current_command) + '\n')
-			else: outfile.write(code.getC(parser.dest(), parser.comp(), parser.jump()) + '\n')
+				try: 
+					if self.atypenum.match(parser.current_command)[0]:
+						outfile.write(code.getA(parser.current_command) + '\n')	
+				except:
+					if st.contains(parser.current_command.split("@")[1]):
+						outfile.write(code.getA(parser.current_command) + '\n')
+					else:
+						st.addEntry(parser.current_command.split("@")[1], self.i)
+						self.i += 1
+						outfile.write(code.getA(parser.current_command) + '\n')
+			elif parser.commandType() == 2:
+				outfile.write(code.getC(parser.dest(), parser.comp(), parser.jump()) + '\n')
+			#elif: parser.commandType() == 3:
+				#outfile.write(code.getA(parser.symbol) + '\n')
+		
+	def assemble(self, infile, outfile):
+		self.pass1(infile)
+		#print(infile)
+		self.pass2(infile, outfile)
 			
 			
 def main():
@@ -104,14 +167,20 @@ def main():
 	outfile = open(outname, 'w')
 	
 	#remove whitespaces and comments
-	comment = re.compile(r'//.*$')
+	comment = re.compile('//.*$')
 	while("" in infile): 
-		infile.remove("")
-	for line in reversed(infile):
-		try:
-			infile.remove(comment.match(line)[0])
-		except:
-			continue
+		infile.remove("")	
+	infile = [comment.sub('', x) for x in infile if not comment.match(x)]
+	infile = [x.strip() for x in infile]
+	#for line in reversed(infile):
+		#try:
+			#comment.sub('', line)
+			#print(line)
+			
+			#print(comment.search(line)[0])
+			#infile.remove(comment.search(line)[0])
+		#except:
+			#continue
 	
 	print(infile)	
 	assembler = Assembler()
